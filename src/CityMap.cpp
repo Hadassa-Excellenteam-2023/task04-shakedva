@@ -1,9 +1,12 @@
 #include "CityMap.h"
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
+#include <set>
 
 
-const std::string PATH = "data.txt";
+//const std::string PATH = "data.txt";
+const std::string PATH = "dataTest.txt";
 
 CityMap::CityMap()
 {
@@ -31,17 +34,48 @@ void CityMap::parseMap()
 		
 		iss  >> x >> sep >> y;
 		std::pair coordinates = std::make_pair(x, y);
-//		_cityToCoordinates[cityName] = coordinates;
 
 		_cityToCoordinates.insert(std::make_pair(cityName, coordinates));
 		_coordinatesToCity.insert(std::make_pair(coordinates, cityName));
+		_xToY[x].push_back(y);
+		_yToX[y].push_back(x);
 
-		i++;
-		if (i == 10)
-			break;
 	}
+	
+	//print();
+	filterByX();
+}
+
+void CityMap::filterByX()
+{
+//	std::map<double, std::vector<double>>mapX;
+	std::map<double,std::vector< double>> filteredMap;
+
+	double lowerBound = 30;
+	double upperBound = 32; // inclusive
+
+	//  filter the map 
+	std::copy_if(_xToY.begin(), _xToY.end(), std::inserter(filteredMap, filteredMap.begin()),
+		[lowerBound, upperBound](const std::pair<int, std::vector< double>>& pair) {
+			return pair.first >= lowerBound && pair.first <= upperBound;
+		});
+
+	// print the filtered map
+	for (auto it = filteredMap.cbegin(); it != filteredMap.cend(); ++it)
+	{
+		std::cout << std::setprecision(8) << "x: " << it->first << " y: ";// << it->second << "\n";
+		for (const auto& value : filteredMap[it->first]) {
+			std::cout << value << " ";
+		}
+		std::cout << std::endl;
+	}
+
+}
+
+void CityMap::print()
+{
 	std::cout << "_cityToCoordinates\n";
-	for (auto  it = _cityToCoordinates.cbegin(); it != _cityToCoordinates.cend(); ++it)
+	for (auto it = _cityToCoordinates.cbegin(); it != _cityToCoordinates.cend(); ++it)
 	{
 		std::cout << std::setprecision(8) << "City: " << it->first << " x: " << it->second.first << " y: " << it->second.second << "\n";
 	}
@@ -52,5 +86,23 @@ void CityMap::parseMap()
 		std::cout << std::setprecision(8) << "x: " << it->first.first << " y: " << it->first.second << " City: " << it->second << "\n";
 	}
 
+	std::cout << "_xToY\n";
+	for (auto it = _xToY.cbegin(); it != _xToY.cend(); ++it)
+	{
+		std::cout << std::setprecision(8) << "x: " << it->first << " y: ";
+		for (const auto& value : _xToY[it->first]) {
+			std::cout << value << " ";
+		}
+		std::cout << std::endl;
+	}
 
+	std::cout << "_yToX\n";
+	for (auto it = _yToX.cbegin(); it != _yToX.cend(); ++it)
+	{
+		std::cout << std::setprecision(8) << "y: " << it->first << " x: ";
+		for (const auto& value : _yToX[it->first]) {
+			std::cout << value << " ";
+		}
+		std::cout << std::endl;
+	}
 }

@@ -1,1 +1,1 @@
-configure_file ("data.txt" ${CMAKE_BINARY_DIR} COPYONLY)
+configure_file ("dataTest.txt" ${CMAKE_BINARY_DIR} COPYONLY)
