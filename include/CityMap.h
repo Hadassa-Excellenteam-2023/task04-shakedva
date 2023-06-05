@@ -12,15 +12,21 @@ class CityMap
 public:
 	CityMap();
 	void parseMap();
-	void findClosestCitiesByRadius(std::string, double);
+	void findClosestCitiesByRadius(std::string, int, int);
 
 private:
 	void print();
 	bool validateCityName(std::string);
 	bool validateRadius(int);
+	bool validateNorm(int);
+	auto claculateBoundingSquare();
+	std::pair<double, std::string> calculateDistance(const Coordinates&, const std::pair<Coordinates, std::string>&, Norm&, int);
 	std::ifstream _mapFile;
+	Norm _norm;
 
-	std::multimap<Coordinates, std::string, sortByX> _coordinatesToCityLesserX;
-	std::multimap<Coordinates, std::string, sortByY> _coordinatesToCityLesserY;
+	std::multimap<Coordinates, std::string, SortByX> _coordinatesToCityLesserX;
+	std::multimap<Coordinates, std::string, SortByY> _coordinatesToCityLesserY;
 	std::map<std::string, Coordinates> _cityToCoordinates;
 };
+
+//todo north of the selected city

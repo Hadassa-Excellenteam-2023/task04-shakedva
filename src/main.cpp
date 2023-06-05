@@ -13,7 +13,9 @@ int main()
 	//std::cin >> radius;
 	//cm.findClosestCitiesByRadius(cityName, radius);
 
-	cm.findClosestCitiesByRadius("Akron, AL", 2);
+	cm.findClosestCitiesByRadius("Akron, AL", 2, 0);
+	cm.findClosestCitiesByRadius("Akron, AL", 2, 1);
+	cm.findClosestCitiesByRadius("Akron, AL", 2, 2);
 	
 	//cm.findClosestCitiesByRadius("Eilat", 10);
 	//cm.findClosestCitiesByRadius("Akron, AL", -2);
