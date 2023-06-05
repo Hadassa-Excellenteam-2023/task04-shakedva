@@ -4,19 +4,8 @@
 #include <map>
 #include <vector>
 #include <fstream>
+#include "Coordinates.h"
 
-struct sortByX {
-	bool operator()(const std::pair<double, double>& l, const std::pair<double, double>& r) const
-	{
-		return (l.first < r.first);
-	}
-};
-struct sortByY {
-	bool operator()(const std::pair<double, double>& l, const std::pair<double, double>& r) const
-	{
-		return (l.second < r.second);
-	}
-};
 
 class CityMap
 {
@@ -27,14 +16,11 @@ public:
 
 private:
 	void print();
+	bool validateCityName(std::string);
+	bool validateRadius(int);
 	std::ifstream _mapFile;
 
-	std::multimap<std::pair<double, double>, std::string, sortByX> _coordinatesToCityLesserX;
-	std::multimap<std::pair<double, double>, std::string, sortByY> _coordinatesToCityLesserY;
-	std::map<std::string, std::pair<double, double>> _cityToCoordinates;
-
-	//std::map<std::pair<double, double>, std::string> _coordinatesToCity;
-	//std::map<double, std::vector<double>> _xToY;
-	//std::map<double, std::vector<double>> _yToX;
-
+	std::multimap<Coordinates, std::string, sortByX> _coordinatesToCityLesserX;
+	std::multimap<Coordinates, std::string, sortByY> _coordinatesToCityLesserY;
+	std::map<std::string, Coordinates> _cityToCoordinates;
 };

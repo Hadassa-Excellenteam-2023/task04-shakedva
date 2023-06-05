@@ -1,15 +1,23 @@
 #include "CityMap.h"
 int main()
 {
+	//todo try except
+	
 	CityMap cm;
 	std::string cityName;
 	double radius;
-	/*std::cout << "Enter the city name: ";
-	std::getline(std::cin, cityName);
-	std::cout << "Enter the radius: ";
-	std::cin >> radius;
-	std::cout << "in main. city: " << cityName << " radius: " << radius << std::endl;
+	
+	//std::cout << "Please enter selected city name (with line break after it):" << std::endl;
+	//std::getline(std::cin, cityName);
+	//std::cout << "Please enter the wanted radius:" << std::endl;;
+	//std::cin >> radius;
+	//cm.findClosestCitiesByRadius(cityName, radius);
 
-	cm.findClosestCitiesByRadius(cityName, radius);*/
+	cm.findClosestCitiesByRadius("Akron, AL", 2);
+	
+	//cm.findClosestCitiesByRadius("Eilat", 10);
+	//cm.findClosestCitiesByRadius("Akron, AL", -2);
+
+
 	return 0;
 }
