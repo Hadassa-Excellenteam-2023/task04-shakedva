@@ -4,10 +4,11 @@
 #include <algorithm>
 #include <set>
 #include <functional>
-
+#include <format>
 
 //const std::string PATH = "data.txt"; todo
 const std::string PATH = "dataTest.txt";
+const std::string SEARCH_INFO = "Search result:\n{} city/cities found in the given radius.\n{} cities are to the north of the selected city.\nCity list:\n{}";
 
 CityMap::CityMap()
 {
@@ -18,13 +19,12 @@ CityMap::CityMap()
 		exit(EXIT_FAILURE);
 	}
 	parseMap();
-	print();
+	// print(); todo delete
 }
 
 void CityMap::parseMap()
 {
 	std::string line;
-	int i = 0;
 	while (std::getline(_mapFile, line))
 	{
 		std::string cityName = line;
@@ -45,10 +45,8 @@ void CityMap::parseMap()
 
 void CityMap::findClosestCitiesByRadius(std::string cityName, int radius, int normIndex)
 {
-
 	//todo
-	//validate name, raduis and norm 
-	//calc intersection sequre
+	//validate name, raduis and norm throw exception
 	
 	if (!validateCityName(cityName) || !validateRadius(radius) || !validateNorm(normIndex))
 	{
@@ -56,47 +54,39 @@ void CityMap::findClosestCitiesByRadius(std::string cityName, int radius, int no
 		std::cout << "invalid inputs\n";
 		return;
 	}
+	Coordinates currentCityCoords = _cityToCoordinates.find(cityName)->second;
+	std::multimap <Coordinates, std::string, SortByX> square = calculateBoundingSquare(currentCityCoords, radius);
+	std::multimap<double, std::string> distance = mapDistanceToCity(square, currentCityCoords, normIndex);
 
-	auto cityCoords = _cityToCoordinates.find(cityName);
-	Coordinates currentCity = cityCoords->second;
-	double cityX = cityCoords->second._x;
-	double cityY = cityCoords->second._y;
-
-	auto xBeginIt = _coordinatesToCityLesserX.lower_bound({cityX - radius, 0});
-	auto xEndIt = _coordinatesToCityLesserX.upper_bound({cityX + radius , 0});
-	auto yBeginIt = _coordinatesToCityLesserY.lower_bound({0, cityY - radius});
-	auto yEndIt = _coordinatesToCityLesserY.upper_bound({0, cityY + radius});
-
-	std::multimap <Coordinates, std::string, SortByX> yRectangle(yBeginIt, yEndIt);
-	std::multimap <Coordinates, std::string, SortByX> square;
-
-	std::set_intersection(
-		xBeginIt, xEndIt, 
-		yRectangle.begin(), yRectangle.end(),
-		std::inserter(square, square.begin()),
-		SortByXpair()
-	);
-
-	std::multimap<double, std::string> distance;
-
-	std::transform(square.begin(), square.end(), std::inserter(distance, distance.begin()),
-		[this, &currentCity, normIndex](const std::pair<Coordinates, std::string>& squareCity) {
-			return calculateDistance(currentCity, squareCity, _norm, normIndex);
-		});
-
-	std::cout << "-----------------------------------------\n";
+	std::cout << "-----------------------------------------\nBounding square";
 	for (auto it = distance.cbegin(); it != distance.cend(); ++it)
 	{
 		std::cout <<it->first << " " << it->second << std::endl;
 	}
 	std::cout << "-----------------------------------------\n";
-	std::cout << "subset\n";
+	std::cout << "inside radius\n";
 
-	auto distanceSubsetIt = distance.upper_bound(radius);
-	for (auto it = distance.cbegin(); it != distanceSubsetIt; ++it)
+
+	auto citiesUpToRadius = distance.upper_bound(radius);
+	for (auto it = distance.cbegin(); it != citiesUpToRadius; ++it)
 	{
 		std::cout << it->first << " " << it->second << std::endl;
 	}
+
+	//calc northern cities
+	std::multimap<double, std::string> northernCities;
+
+	std::copy_if(
+		distance.begin(), citiesUpToRadius,
+		std::inserter(northernCities, northernCities.end()),
+		[this, &currentCityCoords](const std::pair<double, std::string>& pair) {
+			Coordinates coord = _cityToCoordinates[pair.second];
+			return coord._x < currentCityCoords._x;
+		}
+	);
+
+	std::cout << "northern cities size: " << northernCities.size();
+
 }
 
 std::pair<double, std::string> CityMap::calculateDistance(const Coordinates& currentCity,
@@ -106,25 +96,41 @@ std::pair<double, std::string> CityMap::calculateDistance(const Coordinates& cur
 	return std::make_pair(distance, squareCity.second);
 }
 
-void CityMap::print()
+
+std::multimap <Coordinates, std::string, SortByX> CityMap::calculateBoundingSquare(Coordinates cityCoords, int radius)
 {
-	std::cout << "_cityToCoordinates\n";
-	for (auto it = _cityToCoordinates.cbegin(); it != _cityToCoordinates.cend(); ++it)
-	{
-		std::cout << std::setprecision(8) << "City: " << it->first << "\tx: " << it->second._x << "\ty: " << it->second._y << "\n";
-	}
-	std::cout << "-----------------------------------------\n";
-	std::cout << "_coordinatesToCityLesserX\n";
-	for (auto it = _coordinatesToCityLesserX.cbegin(); it != _coordinatesToCityLesserX.cend(); ++it)
-	{
-		std::cout << std::setprecision(8) << "x:" << it->first._x << "\ty: " << it->first._y << "\tcity: " << it->second << "\n";
-	}
-	std::cout << "-----------------------------------------\n";
-	std::cout << "_coordinatesToCityLesserY\n";
-	for (auto it = _coordinatesToCityLesserY.cbegin(); it != _coordinatesToCityLesserY.cend(); ++it)
-	{
-		std::cout << std::setprecision(8) << "x:" << it->first._x << "\ty: " << it->first._y << "\tcity: " << it->second << "\n";
-	}
+	double cityX = cityCoords._x;
+	double cityY = cityCoords._y;
+
+	auto xBeginIt = _coordinatesToCityLesserX.lower_bound({ cityX - radius, 0 });
+	auto xEndIt = _coordinatesToCityLesserX.upper_bound({ cityX + radius , 0 });
+	auto yBeginIt = _coordinatesToCityLesserY.lower_bound({ 0, cityY - radius });
+	auto yEndIt = _coordinatesToCityLesserY.upper_bound({ 0, cityY + radius });
+
+	std::multimap <Coordinates, std::string, SortByX> yRectangle(yBeginIt, yEndIt);
+	std::multimap <Coordinates, std::string, SortByX> square;
+
+	std::set_intersection(
+		xBeginIt, xEndIt,
+		yRectangle.begin(), yRectangle.end(),
+		std::inserter(square, square.begin()),
+		SortByXpair()
+	);
+	return square;
+}
+
+std::multimap<double, std::string> CityMap::mapDistanceToCity(auto square, Coordinates currentCityCoords, int normIndex)
+{
+	std::multimap<double, std::string> distance;
+
+	std::transform(
+		square.begin(), square.end(),
+		std::inserter(distance, distance.begin()),
+		[this, &currentCityCoords, normIndex](const std::pair<Coordinates, std::string>& squareCity)
+		{
+			return calculateDistance(currentCityCoords, squareCity, _norm, normIndex);
+		});
+	return distance;
 }
 
 bool CityMap::validateCityName(std::string cityName)
@@ -142,6 +148,38 @@ bool CityMap::validateNorm(int norm)
 	return norm >=0 && norm < 3;
 }
 
-auto CityMap::claculateBoundingSquare()
+
+void CityMap::printInformation(size_t numOfCitiesFound)
 {
+	//std::cout << std::endl << std::format(SEARCH_INFO, numOfCitiesFound, 0, "Adamsville, AL") << std::endl;
 }
+
+//todo delete
+void CityMap::print()
+{
+	std::cout << "_cityToCoordinates\n";
+	for (auto it = _cityToCoordinates.cbegin(); it != _cityToCoordinates.cend(); ++it)
+	{
+		std::cout << std::setprecision(8) << "City: " << it->first << "\tx: " << it->second._x << "\ty: " << it->second._y << "\n";
+	}
+	std::cout << "-----------------------------------------\n";
+	std::cout << "_coordinatesToCityLesserX\n";
+	for (auto it = _coordinatesToCityLesserX.cbegin(); it != _coordinatesToCityLesserX.cend(); ++it)
+	{
+		std::cout << std::setprecision(8) << "x: (" << it->first._x << " " << it->first._y << "\t)city: " << it->second << "\n";
+	}
+	std::cout << "-----------------------------------------\n";
+	std::cout << "_coordinatesToCityLesserY\n";
+	for (auto it = _coordinatesToCityLesserY.cbegin(); it != _coordinatesToCityLesserY.cend(); ++it)
+	{
+		std::cout << std::setprecision(8) << "x: (" << it->first._x << " " << it->first._y << "\t) city: " << it->second << "\n";
+	}
+
+	std::cout << "-----------------------------------------\n";
+
+	for (auto it = _coordinatesToCityLesserX.cbegin(); it != _coordinatesToCityLesserX.cend(); ++it)
+	{
+		std::cout << std::setprecision(8) << "(" << it->first._x << " ," << it->first._y << "\t)" << it->second << "\n";
+	}
+}
+
