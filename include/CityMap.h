@@ -24,7 +24,7 @@ private:
 	std::vector<std::string> getCitiesInRadius(std::multimap<double, std::string>, int);
 	size_t getNumOfNorthernCities(const Coordinates&, std::multimap<double, std::string>, int);
 	
-	void printInformation(std::vector<std::string>, size_t);
+	void printInformation(const std::vector<std::string>&, size_t) const;
 	
 	std::ifstream _mapFile;
 	Norm _norm;

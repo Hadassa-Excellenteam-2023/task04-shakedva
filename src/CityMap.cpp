@@ -73,19 +73,19 @@ std::pair<double, std::string> CityMap::calculateDistance(const Coordinates& cur
 std::vector<std::string> CityMap::getCitiesInRadius(std::multimap<double, std::string> distance, int radius)
 {
 	std::vector<std::string> citiesInRadius;
-
-	std::transform(++distance.begin(), distance.upper_bound(radius),
-		std::back_inserter(citiesInRadius),
-		[](const std::pair<const double, std::string>& pair) {
-			return pair.second;
-		});
-
+	if(distance.size() > 1)
+	{ 
+		std::transform(++distance.begin(), distance.upper_bound(radius),
+			std::back_inserter(citiesInRadius),
+			[](const std::pair<const double, std::string>& pair) {
+				return pair.second;
+			});
+	}
 	return citiesInRadius;
 }
 
 size_t CityMap::getNumOfNorthernCities(const Coordinates& currentCityCoords, std::multimap<double, std::string> distance, int radius)
 {
-	std::multimap<double, std::string> northernCities;
 	return std::count_if(
 		distance.begin(), distance.upper_bound(radius),
 		[this, &currentCityCoords](const std::pair<double, std::string>& pair) {
@@ -147,7 +147,7 @@ bool CityMap::validateNorm(int norm)
 	return norm >=0 && norm < 3;
 }
 
-void CityMap::printInformation(std::vector<std::string> citiesInRadius, size_t numOfNorthernCities)
+void CityMap::printInformation(const std::vector<std::string>& citiesInRadius, size_t numOfNorthernCities) const
 {
 	std::cout << std::endl << std::format(SEARCH_INFO, citiesInRadius.size(), numOfNorthernCities) << std::endl;
 	std::copy(citiesInRadius.begin(), citiesInRadius.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
