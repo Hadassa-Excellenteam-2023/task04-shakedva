@@ -5,10 +5,12 @@
 #include <set>
 #include <functional>
 #include <format>
+#include <vector>
+
 
 //const std::string PATH = "data.txt"; todo
 const std::string PATH = "dataTest.txt";
-const std::string SEARCH_INFO = "Search result:\n{} city/cities found in the given radius.\n{} cities are to the north of the selected city.\nCity list:\n{}";
+const std::string SEARCH_INFO = "Search result:\n{} city/cities found in the given radius.\n{} cities are to the north of the selected city.\nCity list:";
 
 CityMap::CityMap()
 {
@@ -57,36 +59,8 @@ void CityMap::findClosestCitiesByRadius(std::string cityName, int radius, int no
 	Coordinates currentCityCoords = _cityToCoordinates.find(cityName)->second;
 	std::multimap <Coordinates, std::string, SortByX> square = calculateBoundingSquare(currentCityCoords, radius);
 	std::multimap<double, std::string> distance = mapDistanceToCity(square, currentCityCoords, normIndex);
-
-	std::cout << "-----------------------------------------\nBounding square";
-	for (auto it = distance.cbegin(); it != distance.cend(); ++it)
-	{
-		std::cout <<it->first << " " << it->second << std::endl;
-	}
-	std::cout << "-----------------------------------------\n";
-	std::cout << "inside radius\n";
-
-
-	auto citiesUpToRadius = distance.upper_bound(radius);
-	for (auto it = distance.cbegin(); it != citiesUpToRadius; ++it)
-	{
-		std::cout << it->first << " " << it->second << std::endl;
-	}
-
-	//calc northern cities
-	std::multimap<double, std::string> northernCities;
-
-	std::copy_if(
-		distance.begin(), citiesUpToRadius,
-		std::inserter(northernCities, northernCities.end()),
-		[this, &currentCityCoords](const std::pair<double, std::string>& pair) {
-			Coordinates coord = _cityToCoordinates[pair.second];
-			return coord._x < currentCityCoords._x;
-		}
-	);
-
-	std::cout << "northern cities size: " << northernCities.size();
-
+	std::vector<std::string> citiesInRadius = getCitiesInRadius(distance, radius);
+	printInformation(citiesInRadius, getNumOfNorthernCities(currentCityCoords, distance, radius));
 }
 
 std::pair<double, std::string> CityMap::calculateDistance(const Coordinates& currentCity,
@@ -96,8 +70,33 @@ std::pair<double, std::string> CityMap::calculateDistance(const Coordinates& cur
 	return std::make_pair(distance, squareCity.second);
 }
 
+std::vector<std::string> CityMap::getCitiesInRadius(std::multimap<double, std::string> distance, int radius)
+{
+	std::vector<std::string> citiesInRadius;
 
-std::multimap <Coordinates, std::string, SortByX> CityMap::calculateBoundingSquare(Coordinates cityCoords, int radius)
+	std::transform(++distance.begin(), distance.upper_bound(radius),
+		std::back_inserter(citiesInRadius),
+		[](const std::pair<const double, std::string>& pair) {
+			return pair.second;
+		});
+
+	return citiesInRadius;
+}
+
+size_t CityMap::getNumOfNorthernCities(const Coordinates& currentCityCoords, std::multimap<double, std::string> distance, int radius)
+{
+	std::multimap<double, std::string> northernCities;
+	return std::count_if(
+		distance.begin(), distance.upper_bound(radius),
+		[this, &currentCityCoords](const std::pair<double, std::string>& pair) {
+			Coordinates coord = _cityToCoordinates[pair.second];
+			return coord._x < currentCityCoords._x;
+		}
+	);
+}
+
+
+std::multimap <Coordinates, std::string, SortByX> CityMap::calculateBoundingSquare(const Coordinates& cityCoords, int radius)
 {
 	double cityX = cityCoords._x;
 	double cityY = cityCoords._y;
@@ -119,7 +118,7 @@ std::multimap <Coordinates, std::string, SortByX> CityMap::calculateBoundingSqua
 	return square;
 }
 
-std::multimap<double, std::string> CityMap::mapDistanceToCity(auto square, Coordinates currentCityCoords, int normIndex)
+std::multimap<double, std::string> CityMap::mapDistanceToCity(auto square, const Coordinates& currentCityCoords, int normIndex)
 {
 	std::multimap<double, std::string> distance;
 
@@ -148,38 +147,8 @@ bool CityMap::validateNorm(int norm)
 	return norm >=0 && norm < 3;
 }
 
-
-void CityMap::printInformation(size_t numOfCitiesFound)
+void CityMap::printInformation(std::vector<std::string> citiesInRadius, size_t numOfNorthernCities)
 {
-	//std::cout << std::endl << std::format(SEARCH_INFO, numOfCitiesFound, 0, "Adamsville, AL") << std::endl;
+	std::cout << std::endl << std::format(SEARCH_INFO, citiesInRadius.size(), numOfNorthernCities) << std::endl;
+	std::copy(citiesInRadius.begin(), citiesInRadius.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
 }
-
-//todo delete
-void CityMap::print()
-{
-	std::cout << "_cityToCoordinates\n";
-	for (auto it = _cityToCoordinates.cbegin(); it != _cityToCoordinates.cend(); ++it)
-	{
-		std::cout << std::setprecision(8) << "City: " << it->first << "\tx: " << it->second._x << "\ty: " << it->second._y << "\n";
-	}
-	std::cout << "-----------------------------------------\n";
-	std::cout << "_coordinatesToCityLesserX\n";
-	for (auto it = _coordinatesToCityLesserX.cbegin(); it != _coordinatesToCityLesserX.cend(); ++it)
-	{
-		std::cout << std::setprecision(8) << "x: (" << it->first._x << " " << it->first._y << "\t)city: " << it->second << "\n";
-	}
-	std::cout << "-----------------------------------------\n";
-	std::cout << "_coordinatesToCityLesserY\n";
-	for (auto it = _coordinatesToCityLesserY.cbegin(); it != _coordinatesToCityLesserY.cend(); ++it)
-	{
-		std::cout << std::setprecision(8) << "x: (" << it->first._x << " " << it->first._y << "\t) city: " << it->second << "\n";
-	}
-
-	std::cout << "-----------------------------------------\n";
-
-	for (auto it = _coordinatesToCityLesserX.cbegin(); it != _coordinatesToCityLesserX.cend(); ++it)
-	{
-		std::cout << std::setprecision(8) << "(" << it->first._x << " ," << it->first._y << "\t)" << it->second << "\n";
-	}
-}
-

@@ -35,7 +35,6 @@ struct SortByXpair {
 //todo change into class? 
 struct Norm
 {
-	//typedef double (*NormFunctionPointer)();
 	typedef double (Norm::*NormFunctionPointer)(const Coordinates&, const Coordinates&);
 
 	std::unordered_map<int, NormFunctionPointer> _normFunctionMap;
@@ -68,10 +67,3 @@ private:
 		return xDelta + yDelta;
 	}
 };
-
-
-//std::cout << "coord0:\t" << coord0._x << " " << coord0._y << std::endl;
-//std::cout << "coord1:\t" << coord1._x << " " << coord1._y << std::endl;
-
-//std::cout << "xDelta: " << xDelta << "yDelta: " << yDelta << std::endl;
-//std::cout << sqrt(pow(xDelta, 2) + pow(yDelta, 2)) << std::endl;
