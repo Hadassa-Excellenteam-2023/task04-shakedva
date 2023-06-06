@@ -8,6 +8,7 @@
 #include <vector>
 #include <filesystem>
 
+const int MAX_NORM_FUNCTIONS = 3;
 const std::string PATH = "data.txt";
 const std::string SEARCH_INFO = "Search result:\n{} city/cities found in the given radius.\n{} cities are to the north of the selected city.\nCity list:";
 const std::string CITY_NAME_INPUT = "Please enter selected city name (with line break after it):";
@@ -22,6 +23,10 @@ const std::string FORMAT_ERR = "The file is not in the correct format. Format er
 const std::string FILE_OPEN_ERR = "Failed to open file: {}";
 const std::string EMPTY_FILE = "The file is empty";
 
+/*
+* Constructor that opens the data file.
+* Throws exception in case there is a problem with the file.
+*/
 CityMap::CityMap()
 {
 	_mapFile.open(PATH, std::ios::in);
@@ -35,12 +40,18 @@ CityMap::CityMap()
 	parseMap();
 }
 
+/*
+* Destructor that closes the data file. 
+*/
 CityMap::~CityMap()
 {
 	if (_mapFile.is_open())
 		_mapFile.close();
 }
 
+/*
+*	Recives input from the user - city name, radius and norm function and prints the relavent information.
+*/
 void CityMap::run()
 {
 	std::string cityName;
@@ -51,6 +62,7 @@ void CityMap::run()
 	std::getline(std::cin, cityName);
 	while (cityName != EXIT_PROG)
 	{
+		// get city name
 		while (!validateCityName(cityName))
 		{
 			if (cityName == EXIT_PROG) {
@@ -62,7 +74,7 @@ void CityMap::run()
 			std::cin.clear();
 			std::getline(std::cin, cityName);
 		}
-
+		// get radius
 		std::cout << RADIUS_INPUT << std::endl;;
 		while (!(std::cin >> radius) || !validateRadius(radius))
 		{
@@ -71,7 +83,7 @@ void CityMap::run()
 			std::cin.clear();
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		}
-
+		// get norm function index
 		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 		std::cout << NORM_INPUT << std::endl;;
 		while (!(std::cin >> normIndex) || !validateNorm(normIndex))
@@ -90,7 +102,11 @@ void CityMap::run()
 	}
 	std::cout << EXIT_MSG << std::endl;
 }
-
+/*
+* Parses the map file according to the format: city name, end line, x, seperator (-) y, end line.
+* Saves the class members data according to the file.
+* Throws exception if the file is not in the correct format. 
+*/
 void CityMap::parseMap()
 {
 	std::string line;
@@ -115,71 +131,22 @@ void CityMap::parseMap()
 		_cityToCoordinates.insert(std::make_pair(cityName, coordinates));
 	}
 }
-
+/*
+*	Finds the closest cities to the city it received by radius and the norm function index. 
+*/
 void CityMap::findClosestCitiesByRadius(std::string cityName, double radius, int normIndex)
 {
 	Coordinates currentCityCoords = _cityToCoordinates.find(cityName)->second;
 	std::multimap <Coordinates, std::string, SortByX> square = calculateBoundingSquare(currentCityCoords, radius);
-	std::multimap<double, std::string> distance = mapDistanceToCity(square, currentCityCoords, normIndex);
-	std::vector<std::string> citiesInRadius = getCitiesInRadius(distance, radius);
+	std::multimap<double, std::string> distance = mapDistanceToCity(square, currentCityCoords, normIndex); // cities closest to the city sorted 
+	std::vector<std::string> citiesInRadius = getCitiesInRadius(distance, radius); 
 	printInformation(citiesInRadius, getNumOfNorthernCities(currentCityCoords, distance, radius));
 }
 
-std::pair<double, std::string> CityMap::calculateDistance(const Coordinates& currentCity,
-	const std::pair<Coordinates, std::string>& squareCity, Norm& norm, int index) 
-{
-	double distance = (norm.*(norm._normFunctionMap[index]))(currentCity, squareCity.first);
-	return std::make_pair(distance, squareCity.second);
-}
-
-std::vector<std::string> CityMap::getCitiesInRadius(std::multimap<double, std::string> distance, int radius)
-{
-	std::vector<std::string> citiesInRadius;
-	if(distance.size() > 1)
-	{ 
-		std::transform(++distance.begin(), distance.upper_bound(radius),
-			std::back_inserter(citiesInRadius),
-			[](const std::pair<const double, std::string>& pair) {
-				return pair.second;
-			});
-	}
-	return citiesInRadius;
-}
-
-size_t CityMap::getNumOfNorthernCities(const Coordinates& currentCityCoords, std::multimap<double, std::string> distance, int radius)
-{
-	return std::count_if(
-		distance.begin(), distance.upper_bound(radius),
-		[this, &currentCityCoords](const std::pair<double, std::string>& pair) {
-			Coordinates coord = _cityToCoordinates[pair.second];
-			return coord._x < currentCityCoords._x;
-		}
-	);
-}
-
-
-std::multimap <Coordinates, std::string, SortByX> CityMap::calculateBoundingSquare(const Coordinates& cityCoords, double radius)
-{
-	double cityX = cityCoords._x;
-	double cityY = cityCoords._y;
-
-	auto xBeginIt = _coordinatesToCityLesserX.lower_bound({ cityX - radius, 0 });
-	auto xEndIt = _coordinatesToCityLesserX.upper_bound({ cityX + radius , 0 });
-	auto yBeginIt = _coordinatesToCityLesserY.lower_bound({ 0, cityY - radius });
-	auto yEndIt = _coordinatesToCityLesserY.upper_bound({ 0, cityY + radius });
-
-	std::multimap <Coordinates, std::string, SortByX> yRectangle(yBeginIt, yEndIt);
-	std::multimap <Coordinates, std::string, SortByX> square;
-
-	std::set_intersection(
-		xBeginIt, xEndIt,
-		yRectangle.begin(), yRectangle.end(),
-		std::inserter(square, square.begin()),
-		SortByXpair()
-	);
-	return square;
-}
-
+/*
+*	Mapping between distance from the current city to all the cities in its bounding square.
+*	The distance is claculated with the norm function index.
+*/
 std::multimap<double, std::string> CityMap::mapDistanceToCity(auto square, const Coordinates& currentCityCoords, int normIndex)
 {
 	std::multimap<double, std::string> distance;
@@ -194,21 +161,98 @@ std::multimap<double, std::string> CityMap::mapDistanceToCity(auto square, const
 	return distance;
 }
 
+/*
+*	Calculate the distance between the current city and another city in it's bounding square
+*/
+std::pair<double, std::string> CityMap::calculateDistance(const Coordinates& currentCity,
+	const std::pair<Coordinates, std::string>& squareCity, Norm& norm, int index) 
+{
+	double distance = (norm.*(norm._normFunctionMap[index]))(currentCity, squareCity.first);
+	return std::make_pair(distance, squareCity.second);
+}
+
+/*
+*	Calculate which are the cities that are within the radius.
+*/
+std::vector<std::string> CityMap::getCitiesInRadius(std::multimap<double, std::string> distance, int radius)
+{
+	std::vector<std::string> citiesInRadius;
+	if(distance.size() > 1)
+	{ 
+		std::transform(++distance.begin(), distance.upper_bound(radius),
+			std::back_inserter(citiesInRadius),
+			[](const std::pair<const double, std::string>& pair) {
+				return pair.second;
+			});
+	}
+	return citiesInRadius;
+}
+/*
+*	Returns the number of cities that are northen to the current city coordinates. 
+*	Northern cities are those that have smaller x coordinate then the current city.
+*/
+size_t CityMap::getNumOfNorthernCities(const Coordinates& currentCityCoords, std::multimap<double, std::string> distance, int radius)
+{
+	return std::count_if(
+		distance.begin(), distance.upper_bound(radius), // the first elements that are within the radius
+		[this, &currentCityCoords](const std::pair<double, std::string>& pair) {
+			Coordinates coord = _cityToCoordinates[pair.second];
+			return coord._x < currentCityCoords._x; 
+		}
+	);
+}
+
+/*
+*	Calculate all the cities that are within our city coordinates bounding sqare. 
+*/
+std::multimap <Coordinates, std::string, SortByX> CityMap::calculateBoundingSquare(const Coordinates& cityCoords, double radius)
+{
+	double cityX = cityCoords._x;
+	double cityY = cityCoords._y;
+
+	auto xBeginIt = _coordinatesToCityLesserX.lower_bound({ cityX - radius, 0 });
+	auto xEndIt = _coordinatesToCityLesserX.upper_bound({ cityX + radius , 0 });
+	auto yBeginIt = _coordinatesToCityLesserY.lower_bound({ 0, cityY - radius });
+	auto yEndIt = _coordinatesToCityLesserY.upper_bound({ 0, cityY + radius });
+
+	std::multimap <Coordinates, std::string, SortByX> yRectangle(yBeginIt, yEndIt); 
+	std::multimap <Coordinates, std::string, SortByX> square;
+
+	// the intersection between the x and y rectangles
+	std::set_intersection(
+		xBeginIt, xEndIt,
+		yRectangle.begin(), yRectangle.end(),
+		std::inserter(square, square.begin()),
+		SortByXpair()
+	);
+	return square;
+}
+
+/*
+*	Validate that the city name received exist
+*/
 bool CityMap::validateCityName(std::string cityName) const
 {
 	return _cityToCoordinates.find(cityName) != _cityToCoordinates.end();
 }
-
+/*
+*	Validate that the radius received is positive
+*/
 bool CityMap::validateRadius(double radius) const
 {
 	return radius > 0;
 }
-
+/*
+*	Validate that the norm received is within valid range
+*/
 bool CityMap::validateNorm(int norm) const
 {
-	return norm >=0 && norm < 3;
+	return norm >=0 && norm < MAX_NORM_FUNCTIONS;
 }
 
+/*
+*	Print the information about closest cities.
+*/
 void CityMap::printInformation(const std::vector<std::string>& citiesInRadius, size_t numOfNorthernCities) const
 {
 	std::cout << std::endl << std::format(SEARCH_INFO, citiesInRadius.size(), numOfNorthernCities) << std::endl;
