@@ -8,8 +8,6 @@
 #include <vector>
 #include <filesystem>
 
-
-
 const std::string PATH = "data.txt";
 const std::string SEARCH_INFO = "Search result:\n{} city/cities found in the given radius.\n{} cities are to the north of the selected city.\nCity list:";
 const std::string CITY_NAME_INPUT = "Please enter selected city name (with line break after it):";
