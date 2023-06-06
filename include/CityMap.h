@@ -11,14 +11,16 @@ class CityMap
 {
 public:
 	CityMap();
-	void parseMap();
-	void findClosestCitiesByRadius(std::string, int, int);
+	void run();
 	
 private:
+	void parseMap();
+	void findClosestCitiesByRadius(std::string, double, int);
 	bool validateCityName(std::string);
-	bool validateRadius(int);
+	bool validateRadius(double);
 	bool validateNorm(int);
-	std::multimap <Coordinates, std::string, SortByX> calculateBoundingSquare(const Coordinates&, int);
+	//bool validateInputs(std::string, int, int);
+	std::multimap <Coordinates, std::string, SortByX> calculateBoundingSquare(const Coordinates&, double);
 	std::multimap<double, std::string> mapDistanceToCity(auto, const Coordinates&, int);
 	std::pair<double, std::string> calculateDistance(const Coordinates&, const std::pair<Coordinates, std::string>&, Norm&, int);
 	std::vector<std::string> getCitiesInRadius(std::multimap<double, std::string>, int);
