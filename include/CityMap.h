@@ -11,15 +11,15 @@ class CityMap
 {
 public:
 	CityMap();
+	~CityMap();
 	void run();
 	
 private:
 	void parseMap();
 	void findClosestCitiesByRadius(std::string, double, int);
-	bool validateCityName(std::string);
-	bool validateRadius(double);
-	bool validateNorm(int);
-	//bool validateInputs(std::string, int, int);
+	bool validateCityName(std::string) const;
+	bool validateRadius(double) const;
+	bool validateNorm(int) const;
 	std::multimap <Coordinates, std::string, SortByX> calculateBoundingSquare(const Coordinates&, double);
 	std::multimap<double, std::string> mapDistanceToCity(auto, const Coordinates&, int);
 	std::pair<double, std::string> calculateDistance(const Coordinates&, const std::pair<Coordinates, std::string>&, Norm&, int);

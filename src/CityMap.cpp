@@ -6,28 +6,41 @@
 #include <functional>
 #include <format>
 #include <vector>
+#include <filesystem>
 
 
-//const std::string PATH = "data.txt"; todo
-const std::string PATH = "dataTest.txt";
+
+const std::string PATH = "data.txt";
 const std::string SEARCH_INFO = "Search result:\n{} city/cities found in the given radius.\n{} cities are to the north of the selected city.\nCity list:";
 const std::string CITY_NAME_INPUT = "Please enter selected city name (with line break after it):";
 const std::string RADIUS_INPUT = "Please enter the wanted radius:";
 const std::string NORM_INPUT = "Please enter the wanted norm (0 - L2, Euclidean distance, 1 - Linf, Chebyshev distance, 2 - L1, Manhattan distance): ";
 const std::string EXIT_PROG = "0";
-const std::string RADIUS_ERR = "The radius must be a positive number.";
-const std::string NORM_ERR = "Invalid norm. Must be an integer in range 0 - 2.";
-const std::string CITY_NAME_ERR = "The city '{}' does not exist.";
+const std::string EXIT_MSG = "Bye";
+const std::string RADIUS_ERR = "\nThe radius must be a positive number.\n";
+const std::string NORM_ERR = "\nInvalid norm. Must be an integer in range 0 - 2.\n";
+const std::string CITY_NAME_ERR = "\nERROR: \"{}\" isn't found in the city list. Please try again.\n";
+const std::string FORMAT_ERR = "The file is not in the correct format. Format error at line {}.";
+const std::string FILE_OPEN_ERR = "Failed to open file: {}";
+const std::string EMPTY_FILE = "The file is empty";
 
 CityMap::CityMap()
 {
 	_mapFile.open(PATH, std::ios::in);
-	if (!_mapFile.is_open()) // file didn't open
-	{
-		//todo throw exception
-		exit(EXIT_FAILURE);
+
+	if (!_mapFile.is_open()) {
+		throw std::runtime_error(std::format (FILE_OPEN_ERR, PATH));
+	}
+	else if (std::filesystem::is_empty(PATH)) {
+		throw std::runtime_error(EMPTY_FILE);
 	}
 	parseMap();
+}
+
+CityMap::~CityMap()
+{
+	if (_mapFile.is_open())
+		_mapFile.close();
 }
 
 void CityMap::run()
@@ -43,7 +56,7 @@ void CityMap::run()
 		while (!validateCityName(cityName))
 		{
 			if (cityName == EXIT_PROG) {
-				std::cout << "Bye" << std::endl;
+				std::cout << EXIT_MSG << std::endl;
 				return;
 			}
 			std::cerr << std::format(CITY_NAME_ERR, cityName) << std::endl;
@@ -77,28 +90,32 @@ void CityMap::run()
 		std::cout << CITY_NAME_INPUT << std::endl;
 		std::getline(std::cin, cityName);
 	}
-	std::cout << "Bye" << std::endl;
+	std::cout << EXIT_MSG << std::endl;
 }
 
 void CityMap::parseMap()
 {
 	std::string line;
+	size_t lineIndex = 0;
+	double x, y;
+	char sep;
 	while (std::getline(_mapFile, line))
 	{
+		lineIndex++;
 		std::string cityName = line;
-		double x, y;
-		char sep;
-		std::getline(_mapFile, line); // get the coordinates
 
+		std::getline(_mapFile, line); // get the coordinates
+		lineIndex++;
 		std::istringstream iss(line);
 		
-		iss  >> x >> sep >> y;
+		if(!(iss >> x >> sep >> y) || sep != '-')
+			throw std::runtime_error(std::format(FORMAT_ERR, lineIndex));
+
 		Coordinates coordinates = { x, y };
 		_coordinatesToCityLesserX.insert(std::make_pair(coordinates, cityName));
 		_coordinatesToCityLesserY.insert(std::make_pair(coordinates, cityName));
 		_cityToCoordinates.insert(std::make_pair(cityName, coordinates));
 	}
-
 }
 
 void CityMap::findClosestCitiesByRadius(std::string cityName, double radius, int normIndex)
@@ -179,42 +196,20 @@ std::multimap<double, std::string> CityMap::mapDistanceToCity(auto square, const
 	return distance;
 }
 
-bool CityMap::validateCityName(std::string cityName)
+bool CityMap::validateCityName(std::string cityName) const
 {
 	return _cityToCoordinates.find(cityName) != _cityToCoordinates.end();
 }
 
-bool CityMap::validateRadius(double radius)
+bool CityMap::validateRadius(double radius) const
 {
 	return radius > 0;
 }
 
-bool CityMap::validateNorm(int norm)
+bool CityMap::validateNorm(int norm) const
 {
 	return norm >=0 && norm < 3;
 }
-//
-//bool CityMap::validateInputs(std::string cityName, int radius, int normIndex)
-//{
-//	bool valid = true;
-//	if (!validateCityName(cityName))
-//	{
-//		std::cout << std::format(CITY_NAME_ERR, cityName) << std::endl;
-//		valid = false;
-//	}
-//	if (!validateRadius(radius))
-//	{
-//		std::cout << RADIUS_ERR << std::endl;
-//		valid = false;
-//	}
-//	if (!validateNorm(normIndex))
-//	{
-//		std::cout << NORM_ERR << std::endl;
-//		valid = false;
-//	}
-//
-//	return valid;
-//}
 
 void CityMap::printInformation(const std::vector<std::string>& citiesInRadius, size_t numOfNorthernCities) const
 {
