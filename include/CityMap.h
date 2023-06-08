@@ -34,5 +34,5 @@ private:
 
 	std::multimap<Coordinates, std::string, SortByX> _coordinatesToCityLesserX;
 	std::multimap<Coordinates, std::string, SortByY> _coordinatesToCityLesserY;
-	std::map<std::string, Coordinates> _cityToCoordinates;
+	std::unordered_map<std::string, Coordinates> _cityToCoordinates;
 };
